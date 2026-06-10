@@ -22,11 +22,11 @@
             <b>￥{{ presale.price }}</b>
             <span>原价 ￥{{ presale.original_price }}</span>
           </div>
-          <div class="progress-track">
-            <div :style="{ width: `${(presale.reserved / presale.quota) * 100}%` }"></div>
+          <div class="progress-track" :class="{ 'progress-track--low': (presale.remaining ?? presale.quota - presale.reserved) > 0 && (presale.remaining ?? presale.quota - presale.reserved) <= Math.ceil(presale.quota * 0.2), 'progress-track--full': (presale.remaining ?? presale.quota - presale.reserved) <= 0 }">
+            <div :style="{ width: `${((presale.quota - (presale.remaining ?? presale.quota - presale.reserved)) / presale.quota) * 100}%` }"></div>
           </div>
-          <small>已预约 {{ presale.reserved }} / {{ presale.quota }}，{{ presale.pickup_date }} 提货</small>
-          <button class="secondary-button" @click="reserve(presale.id)">预约一份</button>
+          <small>剩余 {{ presale.remaining ?? presale.quota - presale.reserved }} 名额，已预约 {{ presale.reserved }} / {{ presale.quota }}，{{ presale.pickup_date }} 提货</small>
+          <button class="secondary-button" :disabled="(presale.remaining ?? presale.quota - presale.reserved) <= 0" @click="reserve(presale.id)">{{ (presale.remaining ?? presale.quota - presale.reserved) > 0 ? '预约一份' : '名额已满' }}</button>
         </article>
       </div>
       <div class="order-list">
