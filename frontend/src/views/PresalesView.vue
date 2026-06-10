@@ -28,10 +28,14 @@
           <small>剩余 {{ getRemaining(presale) }} 名额，已预约 {{ presale.reserved }} / {{ presale.quota }}，{{ presale.pickup_date }} 提货</small>
           <button
             class="secondary-button"
-            :class="buttonClass(presale)
+            :class="buttonClass(presale)"
             :disabled="getRemaining(presale) <= 0 || reservingIds.has(presale.id)"
             @click="reserve(presale.id)"
           >{{ buttonText(presale) }}</button>
+          <p v-if="cardErrors[presale.id]" class="card-error" role="alert">
+            <span aria-hidden="true">⚠</span> {{ cardErrors[presale.id] }}
+            <button type="button" class="card-error__close" @click="clearCardError(presale.id)" aria-label="关闭提示">×</button>
+          </p>
         </article>
       </div>
       <div class="order-list">
@@ -89,7 +93,8 @@ const members = ref([...fallbackMembers])
 const orders = ref([])
 const message = ref('')
 const messageType = ref('success')
-const reservingIds = reactive(new Set())
+const reservingIds = ref(new Set())
+const cardErrors = reactive({})
 const form = reactive({
   title: '',
   fruit_name: '',
@@ -122,7 +127,7 @@ function progressClass(presale) {
 
 function buttonClass(presale) {
   const remaining = getRemaining(presale)
-  const isReserving = reservingIds.has(presale.id)
+  const isReserving = reservingIds.value.has(presale.id)
   return {
     'secondary-button--urgent': remaining > 0 && remaining <= Math.ceil(presale.quota * 0.2),
     'secondary-button--hot': remaining > 0 && remaining <= 5,
@@ -131,7 +136,7 @@ function buttonClass(presale) {
 }
 
 function buttonText(presale) {
-  if (reservingIds.has(presale.id)) return '处理中…'
+  if (reservingIds.value.has(presale.id)) return '处理中…'
   if (getRemaining(presale) <= 0) return '名额已满'
   const remaining = getRemaining(presale)
   if (remaining <= 5) return `仅剩 ${remaining} 份，立即预约`
@@ -172,12 +177,18 @@ async function submit() {
   }
 }
 
+function clearCardError(presaleId) {
+  delete cardErrors[presaleId]
+}
+
 async function reserve(presaleId) {
-  if (reservingIds.has(presaleId)) return
+  if (reservingIds.value.has(presaleId)) return
   const presale = presales.value.find((p) => p.id === presaleId)
   if (!presale || getRemaining(presale) <= 0) return
 
-  reservingIds.add(presaleId)
+  reservingIds.value = new Set(reservingIds.value)
+  reservingIds.value.add(presaleId)
+  clearCardError(presaleId)
 
   const snapshot = {
     reserved: presale.reserved,
@@ -194,17 +205,19 @@ async function reserve(presaleId) {
     messageType.value = 'success'
     await Promise.all([
       loadData(),
-      new Promise((resolve) => setTimeout(resolve, 600)),
+      new Promise((resolve) => setTimeout(resolve, 500)),
     ])
   } catch (error) {
     presale.reserved = snapshot.reserved
     if ('remaining' in presale) {
       presale.remaining = snapshot.remaining
     }
+    cardErrors[presaleId] = error.message || '预约失败，请重试'
     message.value = error.message
     messageType.value = 'error'
   } finally {
-    reservingIds.delete(presaleId)
+    reservingIds.value = new Set(reservingIds.value)
+    reservingIds.value.delete(presaleId)
   }
 }
 

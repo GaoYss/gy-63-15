@@ -538,6 +538,53 @@ select {
   background: #c62828;
 }
 
+.card-error {
+  margin: 0;
+  padding: 8px 12px 8px 34px;
+  border-radius: 8px;
+  background: #fff1f0;
+  color: #b42318;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid #fecdca;
+  position: relative;
+  animation: card-error-in 0.25s ease-out;
+}
+
+@keyframes card-error-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.card-error span:first-child {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #b42318 !important;
+  font-size: 14px;
+}
+
+.card-error__close {
+  position: absolute;
+  right: 6px;
+  top: 4px;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  background: transparent;
+  color: #b42318;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.card-error__close:hover {
+  background: rgba(180, 35, 24, 0.08);
+}
+
 .order-list {
   display: grid;
   gap: 10px;
