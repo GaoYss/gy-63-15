@@ -538,34 +538,50 @@ select {
   background: #c62828;
 }
 
-.card-error {
+.card-feedback {
   margin: 0;
   padding: 8px 12px 8px 34px;
   border-radius: 8px;
-  background: #fff1f0;
-  color: #b42318;
   font-size: 13px;
   font-weight: 600;
-  border: 1px solid #fecdca;
   position: relative;
-  animation: card-error-in 0.25s ease-out;
+  animation: card-feedback-in 0.25s ease-out;
 }
 
-@keyframes card-error-in {
+@keyframes card-feedback-in {
   from { opacity: 0; transform: translateY(-4px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-.card-error span:first-child {
+.card-feedback--error {
+  background: #fff1f0;
+  color: #b42318;
+  border: 1px solid #fecdca;
+}
+
+.card-feedback--success {
+  background: #edf7e8;
+  color: #1e7e24;
+  border: 1px solid #b8dfab;
+}
+
+.card-feedback span:first-child {
   position: absolute;
   left: 10px;
   top: 50%;
   transform: translateY(-50%);
-  color: #b42318 !important;
   font-size: 14px;
 }
 
-.card-error__close {
+.card-feedback--error span:first-child {
+  color: #b42318 !important;
+}
+
+.card-feedback--success span:first-child {
+  color: #1e7e24 !important;
+}
+
+.card-feedback__close {
   position: absolute;
   right: 6px;
   top: 4px;
@@ -573,7 +589,6 @@ select {
   height: 22px;
   border: 0;
   background: transparent;
-  color: #b42318;
   font-size: 18px;
   font-weight: 700;
   line-height: 1;
@@ -581,8 +596,16 @@ select {
   cursor: pointer;
 }
 
-.card-error__close:hover {
-  background: rgba(180, 35, 24, 0.08);
+.card-feedback--error .card-feedback__close {
+  color: #b42318;
+}
+
+.card-feedback--success .card-feedback__close {
+  color: #1e7e24;
+}
+
+.card-feedback__close:hover {
+  background: rgba(0, 0, 0, 0.06);
 }
 
 .order-list {

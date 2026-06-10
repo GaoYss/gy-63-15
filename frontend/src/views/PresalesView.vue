@@ -32,9 +32,9 @@
             :disabled="getRemaining(presale) <= 0 || reservingIds.has(presale.id)"
             @click="reserve(presale.id)"
           >{{ buttonText(presale) }}</button>
-          <p v-if="cardErrors[presale.id]" class="card-error" role="alert">
-            <span aria-hidden="true">⚠</span> {{ cardErrors[presale.id] }}
-            <button type="button" class="card-error__close" @click="clearCardError(presale.id)" aria-label="关闭提示">×</button>
+          <p v-if="cardFeedback[presale.id]" class="card-feedback" :class="`card-feedback--${cardFeedback[presale.id].type}`" role="alert">
+            <span aria-hidden="true">{{ cardFeedback[presale.id].type === 'success' ? '✓' : '⚠' }}</span> {{ cardFeedback[presale.id].text }}
+            <button type="button" class="card-feedback__close" @click="clearCardFeedback(presale.id)" aria-label="关闭提示">×</button>
           </p>
         </article>
       </div>
@@ -94,7 +94,8 @@ const orders = ref([])
 const message = ref('')
 const messageType = ref('success')
 const reservingIds = ref(new Set())
-const cardErrors = reactive({})
+const cardFeedback = reactive({})
+const feedbackTimers = {}
 const form = reactive({
   title: '',
   fruit_name: '',
@@ -177,8 +178,23 @@ async function submit() {
   }
 }
 
-function clearCardError(presaleId) {
-  delete cardErrors[presaleId]
+function clearCardFeedback(presaleId) {
+  delete cardFeedback[presaleId]
+  if (feedbackTimers[presaleId]) {
+    clearTimeout(feedbackTimers[presaleId])
+    delete feedbackTimers[presaleId]
+  }
+}
+
+function showCardFeedback(presaleId, type, text, duration) {
+  cardFeedback[presaleId] = { type, text }
+  if (feedbackTimers[presaleId]) {
+    clearTimeout(feedbackTimers[presaleId])
+  }
+  feedbackTimers[presaleId] = setTimeout(() => {
+    delete cardFeedback[presaleId]
+    delete feedbackTimers[presaleId]
+  }, duration)
 }
 
 async function reserve(presaleId) {
@@ -188,7 +204,7 @@ async function reserve(presaleId) {
 
   reservingIds.value = new Set(reservingIds.value)
   reservingIds.value.add(presaleId)
-  clearCardError(presaleId)
+  clearCardFeedback(presaleId)
 
   const snapshot = {
     reserved: presale.reserved,
@@ -199,8 +215,22 @@ async function reserve(presaleId) {
     presale.remaining -= 1
   }
 
+  const tempOrderId = Date.now()
+  const memberId = members.value[0]?.id || 1
+
   try {
-    await presaleApi.reserve({ member_id: members.value[0]?.id || 1, presale_id: presaleId, quantity: 1 })
+    await presaleApi.reserve({ member_id: memberId, presale_id: presaleId, quantity: 1 })
+
+    orders.value.unshift({
+      id: tempOrderId,
+      member_id: memberId,
+      presale_id: presaleId,
+      quantity: 1,
+      amount: presale.price,
+      status: 'reserved',
+    })
+
+    showCardFeedback(presaleId, 'success', '预约成功', 2500)
     message.value = '预约成功'
     messageType.value = 'success'
     await Promise.all([
@@ -212,7 +242,7 @@ async function reserve(presaleId) {
     if ('remaining' in presale) {
       presale.remaining = snapshot.remaining
     }
-    cardErrors[presaleId] = error.message || '预约失败，请重试'
+    showCardFeedback(presaleId, 'error', error.message || '预约失败，请重试', 4500)
     message.value = error.message
     messageType.value = 'error'
   } finally {
