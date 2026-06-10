@@ -369,6 +369,73 @@ select {
   cursor: not-allowed;
 }
 
+.secondary-button--urgent {
+  background: #fff3e0;
+  color: #e65100;
+  font-weight: 800;
+  box-shadow: 0 0 0 1px rgba(230, 81, 0, 0.15);
+}
+
+.secondary-button--hot {
+  background: linear-gradient(90deg, #ff5722 0%, #e53935 100%);
+  color: #ffffff;
+  font-weight: 800;
+  animation: hot-pulse 1.4s ease-in-out infinite;
+  box-shadow: 0 2px 8px rgba(229, 57, 53, 0.35);
+}
+
+@keyframes hot-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+}
+
+.secondary-button--loading {
+  position: relative;
+  color: transparent !important;
+  pointer-events: none;
+}
+
+.secondary-button.secondary-button--loading:disabled {
+  background: #2f7d32;
+  color: transparent !important;
+  cursor: progress;
+}
+
+.secondary-button.secondary-button--urgent.secondary-button--loading:disabled {
+  background: #fff3e0;
+}
+
+.secondary-button.secondary-button--hot.secondary-button--loading:disabled {
+  background: linear-gradient(90deg, #ff5722 0%, #e53935 100%);
+}
+
+.secondary-button--loading::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: button-spin 0.8s linear infinite;
+  color: #ffffff;
+}
+
+.secondary-button.secondary-button--loading:not(.secondary-button--hot):not(.secondary-button--urgent)::after {
+  color: #ffffff;
+}
+
+.secondary-button.secondary-button--loading.secondary-button--urgent::after {
+  color: #e65100;
+}
+
+@keyframes button-spin {
+  to { transform: rotate(360deg); }
+}
+
 .message-banner {
   margin-bottom: 12px;
   padding: 10px 12px;

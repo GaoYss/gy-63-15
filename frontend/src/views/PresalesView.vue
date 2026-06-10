@@ -22,11 +22,16 @@
             <b>￥{{ presale.price }}</b>
             <span>原价 ￥{{ presale.original_price }}</span>
           </div>
-          <div class="progress-track" :class="{ 'progress-track--low': (presale.remaining ?? presale.quota - presale.reserved) > 0 && (presale.remaining ?? presale.quota - presale.reserved) <= Math.ceil(presale.quota * 0.2), 'progress-track--full': (presale.remaining ?? presale.quota - presale.reserved) <= 0 }">
-            <div :style="{ width: `${((presale.quota - (presale.remaining ?? presale.quota - presale.reserved)) / presale.quota) * 100}%` }"></div>
+          <div class="progress-track" :class="progressClass(presale)">
+            <div :style="{ width: `${reservedPercent(presale)}%` }"></div>
           </div>
-          <small>剩余 {{ presale.remaining ?? presale.quota - presale.reserved }} 名额，已预约 {{ presale.reserved }} / {{ presale.quota }}，{{ presale.pickup_date }} 提货</small>
-          <button class="secondary-button" :disabled="(presale.remaining ?? presale.quota - presale.reserved) <= 0" @click="reserve(presale.id)">{{ (presale.remaining ?? presale.quota - presale.reserved) > 0 ? '预约一份' : '名额已满' }}</button>
+          <small>剩余 {{ getRemaining(presale) }} 名额，已预约 {{ presale.reserved }} / {{ presale.quota }}，{{ presale.pickup_date }} 提货</small>
+          <button
+            class="secondary-button"
+            :class="buttonClass(presale)
+            :disabled="getRemaining(presale) <= 0 || reservingIds.has(presale.id)"
+            @click="reserve(presale.id)"
+          >{{ buttonText(presale) }}</button>
         </article>
       </div>
       <div class="order-list">
@@ -84,6 +89,7 @@ const members = ref([...fallbackMembers])
 const orders = ref([])
 const message = ref('')
 const messageType = ref('success')
+const reservingIds = reactive(new Set())
 const form = reactive({
   title: '',
   fruit_name: '',
@@ -98,6 +104,39 @@ const form = reactive({
 
 const totalQuota = computed(() => presales.value.reduce((sum, item) => sum + item.quota, 0))
 const totalReserved = computed(() => presales.value.reduce((sum, item) => sum + item.reserved, 0))
+
+function getRemaining(presale) {
+  return presale.remaining ?? presale.quota - presale.reserved
+}
+
+function reservedPercent(presale) {
+  return ((presale.quota - getRemaining(presale)) / presale.quota) * 100
+}
+
+function progressClass(presale) {
+  const remaining = getRemaining(presale)
+  if (remaining <= 0) return 'progress-track--full'
+  if (remaining <= Math.ceil(presale.quota * 0.2)) return 'progress-track--low'
+  return ''
+}
+
+function buttonClass(presale) {
+  const remaining = getRemaining(presale)
+  const isReserving = reservingIds.has(presale.id)
+  return {
+    'secondary-button--urgent': remaining > 0 && remaining <= Math.ceil(presale.quota * 0.2),
+    'secondary-button--hot': remaining > 0 && remaining <= 5,
+    'secondary-button--loading': isReserving,
+  }
+}
+
+function buttonText(presale) {
+  if (reservingIds.has(presale.id)) return '处理中…'
+  if (getRemaining(presale) <= 0) return '名额已满'
+  const remaining = getRemaining(presale)
+  if (remaining <= 5) return `仅剩 ${remaining} 份，立即预约`
+  return '预约一份'
+}
 
 async function loadData() {
   const [presaleList, memberList, orderList] = await Promise.all([
@@ -134,14 +173,38 @@ async function submit() {
 }
 
 async function reserve(presaleId) {
+  if (reservingIds.has(presaleId)) return
+  const presale = presales.value.find((p) => p.id === presaleId)
+  if (!presale || getRemaining(presale) <= 0) return
+
+  reservingIds.add(presaleId)
+
+  const snapshot = {
+    reserved: presale.reserved,
+    remaining: 'remaining' in presale ? presale.remaining : undefined,
+  }
+  presale.reserved += 1
+  if ('remaining' in presale) {
+    presale.remaining -= 1
+  }
+
   try {
     await presaleApi.reserve({ member_id: members.value[0]?.id || 1, presale_id: presaleId, quantity: 1 })
     message.value = '预约成功'
     messageType.value = 'success'
-    await loadData()
+    await Promise.all([
+      loadData(),
+      new Promise((resolve) => setTimeout(resolve, 600)),
+    ])
   } catch (error) {
+    presale.reserved = snapshot.reserved
+    if ('remaining' in presale) {
+      presale.remaining = snapshot.remaining
+    }
     message.value = error.message
     messageType.value = 'error'
+  } finally {
+    reservingIds.delete(presaleId)
   }
 }
 
